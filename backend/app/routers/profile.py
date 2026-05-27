@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from pathlib import Path
 from uuid import uuid4
+import mimetypes
 import os
 from ..database import get_db
 from .. import models, schemas
@@ -48,7 +49,12 @@ def update_profile(payload: schemas.ProfileUpdate, request: Request, db: Session
 
 @router.post("/photo")
 async def upload_profile_photo(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if file.content_type not in ALLOWED_TYPES:
+    extension = ALLOWED_TYPES.get(file.content_type)
+    if not extension:
+        guessed_type, _ = mimetypes.guess_type(file.filename or "")
+        if guessed_type in ALLOWED_TYPES:
+            extension = ALLOWED_TYPES[guessed_type]
+    if not extension:
         raise HTTPException(status_code=400, detail="Only JPG, PNG, or WEBP images are allowed")
     content = await file.read()
     if len(content) == 0:
@@ -60,7 +66,7 @@ async def upload_profile_photo(request: Request, file: UploadFile = File(...), d
         old = UPLOAD_DIR / profile.profile_photo
         if old.exists():
             old.unlink()
-    filename = f"user_{current_user.id}_{uuid4().hex}{ALLOWED_TYPES[file.content_type]}"
+    filename = f"user_{current_user.id}_{uuid4().hex}{extension}"
     path = UPLOAD_DIR / filename
     path.write_bytes(content)
     profile.profile_photo = filename
