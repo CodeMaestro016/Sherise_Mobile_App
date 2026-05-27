@@ -76,6 +76,11 @@ class Api {
     return Map<String, dynamic>.from(jsonDecode(raw));
   }
 
+  static Future<void> saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user', jsonEncode(user));
+  }
+
   static Future<void> logout() async {
     token = null;
     final prefs = await SharedPreferences.getInstance();
@@ -666,7 +671,27 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> loadUser() async {
-    currentUser = await Api.loadSavedUser();
+    final savedUser = await Api.loadSavedUser() ?? {};
+    Map<String, dynamic> mergedUser = Map<String, dynamic>.from(savedUser);
+    try {
+      final profile = Map<String, dynamic>.from(await Api.get('/profile'));
+      mergedUser = {
+        ...savedUser,
+        'name': profile['full_name'] ?? savedUser['name'],
+        'full_name': profile['full_name'],
+        'phone': profile['phone'],
+        'address': profile['address'],
+        'occupation': profile['occupation'],
+        'bio': profile['bio'],
+        'profile_photo': profile['profile_photo'],
+      };
+      await Api.saveUser(mergedUser);
+    } catch (_) {
+      if (savedUser.isNotEmpty) {
+        mergedUser = Map<String, dynamic>.from(savedUser);
+      }
+    }
+    currentUser = mergedUser.isEmpty ? null : mergedUser;
     if (mounted) setState(() {});
   }
 
@@ -688,8 +713,16 @@ class _MainShellState extends State<MainShell> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const CircleAvatar(
-                radius: 14, child: Icon(Icons.person, size: 16)),
+            icon: CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.white,
+              backgroundImage: currentUser?['profile_photo'] != null
+                  ? NetworkImage(currentUser!['profile_photo'])
+                  : null,
+              child: currentUser?['profile_photo'] == null
+                  ? const Icon(Icons.person, size: 16)
+                  : null,
+            ),
             onPressed: () async {
               await Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const ProfilePage()));
