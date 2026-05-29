@@ -12,3 +12,12 @@ services:
         value: 3.11.9
       - key: FRONTEND_ORIGINS
         value: https://sherise-mobile-app.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sherise-db
+          property: connectionString
+
+databases:
+  - name: sherise-db
+    plan: free
+    maxConnections: 10
