@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const apiBase = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000',
+  defaultValue: kIsWeb
+      ? 'http://localhost:8000'
+      : 'https://sherise-mobile-app.onrender.com',
 );
 
 class Api {
