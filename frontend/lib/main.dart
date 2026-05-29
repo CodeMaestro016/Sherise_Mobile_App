@@ -337,8 +337,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final formKey = GlobalKey<FormState>();
-  final emailController = TextEditingController(text: 'demo@sherise.com');
-  final passwordController = TextEditingController(text: '123456');
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
   bool loading = false;
   bool obscure = true;
 
@@ -483,16 +483,17 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!formKey.currentState!.validate()) return;
     setState(() => loading = true);
     try {
-      final res = await Api.post('/auth/register', {
+      await Api.post('/auth/register', {
         'name': nameController.text.trim(),
         'email': emailController.text.trim(),
         'password': passwordController.text.trim(),
       });
-      await Api.saveAuth(
-          res['access_token'], Map<String, dynamic>.from(res['user']));
       if (!mounted) return;
-      Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(builder: (_) => const MainShell()), (_) => false);
+      showMsg(context, 'Account created. Please sign in.');
+      Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (_) => false);
     } catch (e) {
       if (mounted)
         showMsg(context, e.toString().replaceFirst('Exception: ', ''));
@@ -2293,8 +2294,16 @@ class CommunityPostCard extends StatelessWidget {
                     icon: const Icon(Icons.edit_outlined)),
                 IconButton(
                   onPressed: () async {
-                    await Api.delete('/posts/${post['id']}');
-                    await onChanged();
+                    try {
+                      await Api.delete('/posts/${post['id']}');
+                      await onChanged();
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                        );
+                      }
+                    }
                   },
                   icon: const Icon(Icons.delete_outline),
                 ),
@@ -2348,8 +2357,16 @@ class MentorCard extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () async {
-                  await Api.delete('/mentors/${mentor['id']}');
-                  await onChanged();
+                  try {
+                    await Api.delete('/mentors/${mentor['id']}');
+                    await onChanged();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                      );
+                    }
+                  }
                 },
                 icon: const Icon(Icons.delete_outline),
                 iconSize: 20,
